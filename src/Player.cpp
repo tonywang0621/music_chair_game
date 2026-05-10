@@ -24,6 +24,14 @@ string Player::getName()const{
     return name;
 }
 
+float Player :: getRadius()const{
+    return radius;
+}
+
+
+
+
+
 
 
 

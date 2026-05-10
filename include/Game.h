@@ -58,6 +58,10 @@ class Game{
         void shutDown(); //關閉遊戲視窗 並釋放記憶體
         void startNextRound();
 
+        void move_npc_during_music();
+        void check_player_npc_collision();
+        
+
 
 
         ~Game();

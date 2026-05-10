@@ -91,3 +91,26 @@ void NPC::resetForNextRound() {
     _isSitting = false;          // 下一局重新站起來
     targetChair = nullptr;      // 清除上一局的目標椅子
 }
+
+float NPC::getRadius()const{
+    return radius;
+}
+
+void NPC::moveToward(Vector2 targetPosition) {
+    Vector2 direction = {
+        targetPosition.x - position.x,
+        targetPosition.y - position.y
+    };
+
+    float distance = sqrt(direction.x * direction.x + direction.y * direction.y);
+
+    if (distance <= speed || distance == 0) {
+        return;
+    }
+
+    direction.x /= distance;
+    direction.y /= distance;
+
+    position.x += direction.x * speed;
+    position.y += direction.y * speed;
+}

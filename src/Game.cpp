@@ -123,6 +123,9 @@ void Game::update(){
         controller.update(*player);
     }
 
+    move_npc_during_music();
+    check_player_npc_collision();
+
     check_player_too_close_to_chair();
 
     if (!musicPlaying && !roundResolved) {
@@ -333,4 +336,66 @@ void Game::resolveRound() {
 
 float Game::getRandomMusicDuration() {
     return 3.0f + static_cast<float>(rand() % 6);
+}
+
+
+
+void Game::move_npc_during_music() {
+    if (!musicPlaying) {
+        return;
+    }
+
+    for (NPC* npc : npcs) {
+        if (npc->isEliminated() || npc->isSitting()) {
+            continue;
+        }
+
+        // 先讓 NPC 往畫面中央椅子區移動
+        npc->moveToward(Vector2{400, 300});
+    }
+
+}
+
+
+
+// CheckPlayerNPCCollision：玩家和 NPC 碰到時，雙方往反方向彈開
+void Game::check_player_npc_collision() {
+    if (player->isSitting()) {
+        return;
+    }
+
+    Vector2 playerPos = player->getPosition();
+    float playerRadius = player->getRadius();
+
+    for (NPC* npc : npcs) {
+        if (npc->isEliminated() || npc->isSitting()) {
+            continue;
+        }
+
+        Vector2 npcPos = npc->getPosition();
+        float npcRadius = npc->getRadius();
+
+        float dx = playerPos.x - npcPos.x;
+        float dy = playerPos.y - npcPos.y;
+        float distance = sqrt(dx * dx + dy * dy);
+
+        float minDistance = playerRadius + npcRadius;
+
+        if (distance < minDistance && distance > 0) {
+            float nx = dx / distance;
+            float ny = dy / distance;
+
+            float pushDistance = 20.0f;
+
+            player->setPosition(Vector2{
+                playerPos.x + nx * pushDistance,
+                playerPos.y + ny * pushDistance
+            });
+
+            npc->setPosition(Vector2{
+                npcPos.x - nx * pushDistance,
+                npcPos.y - ny * pushDistance
+            });
+        }
+    }
 }

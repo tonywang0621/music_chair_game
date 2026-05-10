@@ -17,5 +17,6 @@ class  Player : public GameObject{
         bool isSitting() const; 
         float getSpeed() const;
         string getName() const;
+        float getRadius()const;
 };
 
