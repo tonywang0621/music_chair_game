@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 Game:: Game():player(nullptr),musicPlaying(true),musicTimer(0.0f),musicDuration(5.0f),round(1),gameOver(false),sitTimer(0.0f),sitDuration(3.0f),playerLose(false),
-npcSitTimer(0.0f),npcSitDelay(1.5f),npc_has_tried_to_sit(false),roundResolved(false),circleAngle(0.0f),circleRadius(180.0f),circleCenter(Vector2{400, 300}),circleSpeed(1.5f),playerAngle(-PI / 2),gameStarted(false){
+npcSitTimer(0.0f),npcSitDelay(1.5f),roundResolved(false),circleAngle(0.0f),circleRadius(180.0f),circleCenter(Vector2{400, 330}),circleSpeed(1.5f),playerAngle(-PI / 2),gameStarted(false){
 }
 
 void Game :: init(){
@@ -23,26 +23,18 @@ void Game :: init(){
 
     player = GameObjectFactory :: createPlayer();
 
-    chairs.push_back(
-        GameObjectFactory::createChair(Vector2{320, 330})
-    );
 
-    chairs.push_back(
-        GameObjectFactory::createChair(Vector2{460, 330})
-    );
-
-    npcs.push_back(
-        GameObjectFactory::createNPC(Vector2{250, 500}, "NPC1", ORANGE)
-    );
-
-    npcs.push_back(
-        GameObjectFactory::createNPC(Vector2{550, 500}, "NPC2", PURPLE)
-    );
+    createInitialChairs();
+    createInitialNPCs();
 
 }
 
 
 void Game::draw(){
+    
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
+
     if (!gameStarted) {
         DrawText("MUSICAL CHAIRS", 210, 180, 50, BLACK);
         DrawText("Press ENTER to Start", 250, 280, 30, DARKGRAY);
@@ -52,8 +44,6 @@ void Game::draw(){
         EndDrawing();
         return;
     }
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
 
     for (Chair* chair : chairs) {
         chair->draw();
@@ -106,6 +96,7 @@ void Game::draw(){
 
     if (roundResolved && !gameOver) {
         DrawText("Press ENTER for next round", 220, 520, 30, BLACK);
+    }
 
     if (musicPlaying && !gameOver) {
         DrawText("Music Playing: Walk around the chairs", 20, 100, 24, DARKGREEN);
@@ -114,8 +105,6 @@ void Game::draw(){
 
     if (!musicPlaying && !roundResolved && !gameOver) {
         DrawText("Music Stopped! Press SPACE near a chair!", 20, 130, 24, RED);
-    }
-
     }
     
     EndDrawing();
@@ -242,18 +231,8 @@ void Game:: check_player_sit(){
             }
 
             Vector2 playerPos = player->getPosition();
-            Vector2 chairPos = chair->getPosition();
-            Vector2 chairSize = chair->getSize();
-
-            Vector2 chairCenter = {
-                chairPos.x + chairSize.x / 2,
-                chairPos.y + chairSize.y / 2
-            };
-
-            float dx = playerPos.x - chairCenter.x;
-            float dy = playerPos.y - chairCenter.y;
-
-            float distance = sqrt(dx * dx + dy * dy);
+            Vector2 chairCenter = getChairCenter(chair);
+            float distance = getDistance(playerPos, chairCenter);
 
             // 距離夠近
             if (distance < 50.0f) {
@@ -263,7 +242,7 @@ void Game:: check_player_sit(){
                 chair->setOccupantName(player->getName());
                 PlaySound(sitSound);
                 
-                if(chairs.size()==1) gameOver = true;
+
 
 
                 break;
@@ -307,28 +286,21 @@ void Game::startNextRound() {
     sitTimer = 0.0f;
     playerLose = false;
     npcSitTimer = 0.0f;
-    npc_has_tried_to_sit = false;
+
     roundResolved = false;
     circleAngle = 0.0f;
     playerAngle = -PI / 2;
 }
-void Game:: check_player_too_close_to_chair(){
-    if(!musicPlaying) return;
 
+void Game::check_player_too_close_to_chair() {
+    if (!musicPlaying) {
+        return;
+    }
 
     for (Chair* chair : chairs) {
         Vector2 playerPos = player->getPosition();
-        Vector2 chairPos = chair->getPosition();
-        Vector2 chairSize = chair->getSize();
-
-        Vector2 chairCenter = {
-            chairPos.x + chairSize.x / 2,
-            chairPos.y + chairSize.y / 2
-        };
-
-        float dx = playerPos.x - chairCenter.x;
-        float dy = playerPos.y - chairCenter.y;
-        float distance = sqrt(dx * dx + dy * dy);
+        Vector2 chairCenter = getChairCenter(chair);
+        float distance = getDistance(playerPos, chairCenter);
 
         if (distance < 90.0f) {
             player->setPosition(Vector2{400, 500});
@@ -356,9 +328,7 @@ void Game::let_npc_sit() {
         }
     }
 }
-
 void Game::resolveRound() {
-    // 玩家沒有坐到椅子，就直接輸
     if (!player->isSitting()) {
         playerLose = true;
         gameOver = true;
@@ -366,17 +336,21 @@ void Game::resolveRound() {
         return;
     }
 
-    // 玩家有坐到，而且只剩最後一張椅子，玩家勝利
+    for (NPC* npc : npcs) {
+        if (!npc->isEliminated() && !npc->isSitting()) {
+            npc->setEliminated(true);
+            break;
+        }
+    }
+
     if (chairs.size() == 1) {
         gameOver = true;
         roundResolved = true;
         return;
     }
 
-    // 玩家有坐到，這回合結束，等待按 Enter 下一局
     roundResolved = true;
 }
-
 float Game::getRandomMusicDuration() {
     return 3.0f + static_cast<float>(rand() % 6);
 }
@@ -530,33 +504,60 @@ void Game::restartGame() {
     }
     chairs.clear();
 
-    chairs.push_back(GameObjectFactory::createChair(Vector2{320, 330}));
-    chairs.push_back(GameObjectFactory::createChair(Vector2{460, 330}));
-
     for (NPC* npc : npcs) {
         delete npc;
     }
     npcs.clear();
 
-    npcs.push_back(GameObjectFactory::createNPC(Vector2{250, 500}, "NPC1", ORANGE));
-    npcs.push_back(GameObjectFactory::createNPC(Vector2{550, 500}, "NPC2", PURPLE));
+    createInitialChairs();
+    createInitialNPCs();
 
     gameOver = false;
     playerLose = false;
-    roundResolved = false;
-    musicPlaying = true;
     gameStarted = true;
-
     round = 1;
+
+    resetRoundState();
+
+    PlayMusicStream(music);
+}
+
+void Game::createInitialChairs() {
+    chairs.push_back(GameObjectFactory::createChair(Vector2{330, 330}));
+    chairs.push_back(GameObjectFactory::createChair(Vector2{460, 330}));
+}
+
+void Game::createInitialNPCs() {
+    npcs.push_back(GameObjectFactory::createNPC(Vector2{250, 500}, "NPC1", ORANGE));
+    npcs.push_back(GameObjectFactory::createNPC(Vector2{550, 500}, "NPC2", PURPLE));
+}
+
+void Game::resetRoundState() {
+    musicPlaying = true;
     musicTimer = 0.0f;
     musicDuration = getRandomMusicDuration();
 
     sitTimer = 0.0f;
     npcSitTimer = 0.0f;
-    npc_has_tried_to_sit = false;
+    roundResolved = false;
 
     circleAngle = 0.0f;
     playerAngle = -PI / 2;
+}
 
-    PlayMusicStream(music);
+float Game::getDistance(Vector2 a, Vector2 b) {
+    float dx = a.x - b.x;
+    float dy = a.y - b.y;
+
+    return sqrt(dx * dx + dy * dy);
+}
+
+Vector2 Game::getChairCenter(Chair* chair) {
+    Vector2 chairPos = chair->getPosition();
+    Vector2 chairSize = chair->getSize();
+
+    return Vector2{
+        chairPos.x + chairSize.x / 2,
+        chairPos.y + chairSize.y / 2
+    };
 }
