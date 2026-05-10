@@ -283,6 +283,7 @@ void Game::startNextRound(){
     npcSitTimer = 0.0f;
     npc_has_tried_to_sit = false;
     roundResolved = false;
+    circleAngle = 0.0f;
 }
 void Game:: check_player_too_close_to_chair(){
     if(!musicPlaying) return;
