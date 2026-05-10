@@ -43,8 +43,14 @@ class Game{
         bool roundResolved; //確認回合結束 能進入下一局
         
         float getRandomMusicDuration(); // 取得隨機音樂播放時間
-    
 
+//要讓玩家 NPC 圍著椅子走的設置
+        float circleAngle;
+        float circleRadius;
+        Vector2 circleCenter;
+        float circleSpeed;
+    
+//
 
 
 
@@ -59,8 +65,10 @@ class Game{
         void startNextRound();
 
         void move_npc_during_music();
-        void check_player_npc_collision();
+        void move_player_during_music();
         
+        void check_player_npc_collision();
+
 
 
 

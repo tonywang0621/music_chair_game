@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 Game:: Game():player(nullptr),musicPlaying(true),musicTimer(0.0f),musicDuration(5.0f),round(1),gameOver(false),sitTimer(0.0f),sitDuration(3.0f),playerLose(false),
-npcSitTimer(0.0f),npcSitDelay(1.5f),npc_has_tried_to_sit(false),roundResolved(false){
+npcSitTimer(0.0f),npcSitDelay(1.5f),npc_has_tried_to_sit(false),roundResolved(false),circleAngle(0.0f),circleRadius(180.0f),circleCenter(Vector2{400, 300}),circleSpeed(1.5f){
 }
 
 void Game :: init(){
@@ -119,8 +119,12 @@ void Game::update(){
         }
     }
 
-    if (!player->isSitting()) {
-        controller.update(*player);
+    if (musicPlaying) {
+        move_player_during_music();
+    } else {
+        if (!player->isSitting()) {
+            controller.update(*player);
+        }
     }
 
     move_npc_during_music();
@@ -356,12 +360,7 @@ void Game::move_npc_during_music() {
         return;
     }
 
-    Vector2 targets[4] = {
-        Vector2{250, 250},
-        Vector2{550, 250},
-        Vector2{550, 450},
-        Vector2{250, 450}
-    };
+    float deltaTime = GetFrameTime();
 
     for (int i = 0; i < npcs.size(); i++) {
         NPC* npc = npcs[i];
@@ -370,11 +369,18 @@ void Game::move_npc_during_music() {
             continue;
         }
 
-        int targetIndex = (round + i) % 4;
-        npc->moveToward(targets[targetIndex]);
-    }
-}
+        float angle = circleAngle + i * 2.0f * PI / (npcs.size() + 1);
 
+        Vector2 newPosition = {
+            circleCenter.x + cos(angle) * circleRadius,
+            circleCenter.y + sin(angle) * circleRadius
+        };
+
+        npc->setPosition(newPosition);
+    }
+
+    circleAngle += circleSpeed * deltaTime;
+}
 
 
 // CheckPlayerNPCCollision：玩家和 NPC 碰到時，雙方往反方向彈開
@@ -417,4 +423,19 @@ void Game::check_player_npc_collision() {
             });
         }
     }
+}
+
+void Game::move_player_during_music() {
+    if (!musicPlaying || player->isSitting()) {
+        return;
+    }
+
+    float angle = circleAngle - PI / 2;
+
+    Vector2 newPosition = {
+        circleCenter.x + cos(angle) * circleRadius,
+        circleCenter.y + sin(angle) * circleRadius
+    };
+
+    player->setPosition(newPosition);
 }
