@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 Game:: Game():player(nullptr),musicPlaying(true),musicTimer(0.0f),musicDuration(5.0f),round(1),gameOver(false),sitTimer(0.0f),sitDuration(3.0f),playerLose(false),
-npcSitTimer(0.0f),npcSitDelay(1.5f),npc_has_tried_to_sit(false),roundResolved(false),circleAngle(0.0f),circleRadius(180.0f),circleCenter(Vector2{400, 300}),circleSpeed(1.5f){
+npcSitTimer(0.0f),npcSitDelay(1.5f),npc_has_tried_to_sit(false),roundResolved(false),circleAngle(0.0f),circleRadius(180.0f),circleCenter(Vector2{400, 300}),circleSpeed(1.5f),playerAngle(-PI / 2),gameStarted(false){
 }
 
 void Game :: init(){
@@ -15,7 +15,7 @@ void Game :: init(){
     InitAudioDevice();
     music = LoadMusicStream("chair_game_music/game.mp3");
     sitSound = LoadSound("chair_game_music/chair.wav");
-    PlayMusicStream(music);
+
 
 
     SetTargetFPS(60);
@@ -24,15 +24,11 @@ void Game :: init(){
     player = GameObjectFactory :: createPlayer();
 
     chairs.push_back(
-        GameObjectFactory::createChair(Vector2{370, 220})
+        GameObjectFactory::createChair(Vector2{320, 330})
     );
 
     chairs.push_back(
-        GameObjectFactory::createChair(Vector2{280, 350})
-    );
-
-    chairs.push_back(
-        GameObjectFactory::createChair(Vector2{460, 350})
+        GameObjectFactory::createChair(Vector2{460, 330})
     );
 
     npcs.push_back(
@@ -47,7 +43,15 @@ void Game :: init(){
 
 
 void Game::draw(){
+    if (!gameStarted) {
+        DrawText("MUSICAL CHAIRS", 210, 180, 50, BLACK);
+        DrawText("Press ENTER to Start", 250, 280, 30, DARKGRAY);
+        DrawText("During music: Use A / D to move", 210, 340, 24, DARKGREEN);
+        DrawText("When music stops: Press SPACE near a chair", 140, 380, 24, RED);
 
+        EndDrawing();
+        return;
+    }
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
@@ -91,16 +95,27 @@ void Game::draw(){
         } else {
             DrawText("YOU WIN!", 300, 250, 60, RED);
         }
+        DrawText("Press R to Restart", 260, 330, 30, BLACK);
     }
 
-    if(!musicPlaying && !player->isSitting() && !gameOver){
+    if (!musicPlaying && !player->isSitting() && !gameOver) {
         float timeleft = sitDuration - sitTimer;
 
-        DrawText(TextFormat("Sit Time Left: %.1f",timeleft),20,100,30,RED);
+        DrawText(TextFormat("Sit Time Left: %.1f", timeleft), 20, 100, 30, RED);
     }
 
     if (roundResolved && !gameOver) {
         DrawText("Press ENTER for next round", 220, 520, 30, BLACK);
+
+    if (musicPlaying && !gameOver) {
+        DrawText("Music Playing: Walk around the chairs", 20, 100, 24, DARKGREEN);
+        DrawText("Use A / D to move on the circle", 20, 130, 24, DARKGREEN);
+    }
+
+    if (!musicPlaying && !roundResolved && !gameOver) {
+        DrawText("Music Stopped! Press SPACE near a chair!", 20, 130, 24, RED);
+    }
+
     }
     
     EndDrawing();
@@ -108,7 +123,20 @@ void Game::draw(){
 void Game::update(){
     UpdateMusicStream(music);
 
-    if(gameOver) return;
+    if (!gameStarted) {
+    if (IsKeyPressed(KEY_ENTER)) {
+        gameStarted = true;
+        PlayMusicStream(music);
+    }
+    return;
+    }
+
+    if (gameOver) {
+        if (IsKeyPressed(KEY_R)) {
+            restartGame();
+        }
+        return;
+    }
 
     if(musicPlaying){
         musicTimer = musicTimer +GetFrameTime();
@@ -129,6 +157,8 @@ void Game::update(){
 
     move_npc_during_music();
     check_player_npc_collision();
+    check_npc_npc_collision();
+
 
     check_player_too_close_to_chair();
 
@@ -244,39 +274,35 @@ void Game:: check_player_sit(){
 
 }
 
-void Game::startNextRound(){
+void Game::startNextRound() {
     player->setSitting(false);
-
-    for (NPC* npc : npcs) {
-        if (!npc->isEliminated()) {
-            npc->resetForNextRound();
-
-            for (int i = 0; i < npcs.size(); i++) {
-                if (i < chairs.size()) {
-                    npcs[i]->setTargetChair(chairs[i]);
-                }
-            }
-        }
-    }
     player->setPosition(Vector2{400, 500});
 
-    if(chairs.size()>1){
+    // 先刪掉一張椅子
+    if (chairs.size() > 1) {
         delete chairs.back();
         chairs.pop_back();
     }
-    
+
+    // 重設椅子狀態
     for (Chair* chair : chairs) {
         chair->setOccupied(false);
         chair->setReserved(false);
         chair->setOccupantName("");
     }
 
+    // 重設 NPC
+    for (NPC* npc : npcs) {
+        if (!npc->isEliminated()) {
+            npc->resetForNextRound();
+        }
+    }
 
     musicPlaying = true;
     PlayMusicStream(music);
-    musicTimer =0.0f;
+    musicTimer = 0.0f;
     musicDuration = getRandomMusicDuration();
-    round = round +1;
+    round++;
 
     sitTimer = 0.0f;
     playerLose = false;
@@ -284,6 +310,7 @@ void Game::startNextRound(){
     npc_has_tried_to_sit = false;
     roundResolved = false;
     circleAngle = 0.0f;
+    playerAngle = -PI / 2;
 }
 void Game:: check_player_too_close_to_chair(){
     if(!musicPlaying) return;
@@ -431,12 +458,105 @@ void Game::move_player_during_music() {
         return;
     }
 
-    float angle = circleAngle - PI / 2;
+    float deltaTime = GetFrameTime();
+
+    // A D 控制順時針 / 逆時針
+    if (IsKeyDown(KEY_D)) {
+        playerAngle += circleSpeed * deltaTime;
+    }
+
+    if (IsKeyDown(KEY_A)) {
+        playerAngle -= circleSpeed * deltaTime;
+    }
 
     Vector2 newPosition = {
-        circleCenter.x + cos(angle) * circleRadius,
-        circleCenter.y + sin(angle) * circleRadius
+        circleCenter.x + cos(playerAngle) * circleRadius,
+        circleCenter.y + sin(playerAngle) * circleRadius
     };
 
     player->setPosition(newPosition);
+}
+
+void Game::check_npc_npc_collision() {
+    for (int i = 0; i < npcs.size(); i++) {
+        NPC* npcA = npcs[i];
+
+        if (npcA->isEliminated() || npcA->isSitting()) {
+            continue;
+        }
+
+        for (int j = i + 1; j < npcs.size(); j++) {
+            NPC* npcB = npcs[j];
+
+            if (npcB->isEliminated() || npcB->isSitting()) {
+                continue;
+            }
+
+            Vector2 posA = npcA->getPosition();
+            Vector2 posB = npcB->getPosition();
+
+            float dx = posA.x - posB.x;
+            float dy = posA.y - posB.y;
+            float distance = sqrt(dx * dx + dy * dy);
+
+            float minDistance = npcA->getRadius() + npcB->getRadius();
+
+            if (distance < minDistance && distance > 0) {
+                float nx = dx / distance;
+                float ny = dy / distance;
+
+                float pushDistance = 10.0f;
+
+                npcA->setPosition(Vector2{
+                    posA.x + nx * pushDistance,
+                    posA.y + ny * pushDistance
+                });
+
+                npcB->setPosition(Vector2{
+                    posB.x - nx * pushDistance,
+                    posB.y - ny * pushDistance
+                });
+            }
+        }
+    }
+}
+
+void Game::restartGame() {
+    player->setSitting(false);
+    player->setPosition(Vector2{400, 500});
+
+    for (Chair* chair : chairs) {
+        delete chair;
+    }
+    chairs.clear();
+
+    chairs.push_back(GameObjectFactory::createChair(Vector2{320, 330}));
+    chairs.push_back(GameObjectFactory::createChair(Vector2{460, 330}));
+
+    for (NPC* npc : npcs) {
+        delete npc;
+    }
+    npcs.clear();
+
+    npcs.push_back(GameObjectFactory::createNPC(Vector2{250, 500}, "NPC1", ORANGE));
+    npcs.push_back(GameObjectFactory::createNPC(Vector2{550, 500}, "NPC2", PURPLE));
+
+    gameOver = false;
+    playerLose = false;
+    roundResolved = false;
+    musicPlaying = true;
+    gameStarted = true;
+
+    round = 1;
+    musicTimer = 0.0f;
+    musicDuration = getRandomMusicDuration();
+
+    sitTimer = 0.0f;
+    npcSitTimer = 0.0f;
+    npc_has_tried_to_sit = false;
+
+    circleAngle = 0.0f;
+    playerAngle = -PI / 2;
+
+    PlayMusicStream(music);
 }

@@ -49,6 +49,12 @@ class Game{
         float circleRadius;
         Vector2 circleCenter;
         float circleSpeed;
+        float playerAngle;
+
+
+        bool gameStarted; //遊戲開始了嗎
+        void restartGame();
+
     
 //
 
@@ -66,8 +72,9 @@ class Game{
 
         void move_npc_during_music();
         void move_player_during_music();
-        
+
         void check_player_npc_collision();
+        void check_npc_npc_collision();
 
 
 
