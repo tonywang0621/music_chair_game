@@ -7,7 +7,7 @@
 #include <vector>
 
 //開次窗 => 建立player =>建立chair =>讓鍵盤移動玩家=>畫出玩家跟椅子 =>關閉視窗
-
+//
 class Game{
     private:
         // 遊戲物件
