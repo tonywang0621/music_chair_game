@@ -135,12 +135,11 @@ void Game::update(){
             resolveRound();
         }
     }
-    if (!musicPlaying && !npc_has_tried_to_sit) {
+    if (!musicPlaying) {
         npcSitTimer += GetFrameTime();
 
         if (npcSitTimer >= npcSitDelay) {
             let_npc_sit();
-            npc_has_tried_to_sit = true;
         }
     }
 
@@ -312,8 +311,12 @@ void Game::let_npc_sit() {
             continue;
         }
 
+        if (npc->getTargetChair() != nullptr) {
+            continue;
+        }
+
         for (Chair* chair : chairs) {
-        if (!chair->isOccupied() && !chair->isReserved()){
+            if (!chair->isOccupied() && !chair->isReserved()) {
                 npc->setTargetChair(chair);
                 chair->setReserved(true);
                 break;
@@ -353,15 +356,23 @@ void Game::move_npc_during_music() {
         return;
     }
 
-    for (NPC* npc : npcs) {
+    Vector2 targets[4] = {
+        Vector2{250, 250},
+        Vector2{550, 250},
+        Vector2{550, 450},
+        Vector2{250, 450}
+    };
+
+    for (int i = 0; i < npcs.size(); i++) {
+        NPC* npc = npcs[i];
+
         if (npc->isEliminated() || npc->isSitting()) {
             continue;
         }
 
-        // 先讓 NPC 往畫面中央椅子區移動
-        npc->moveToward(Vector2{400, 300});
+        int targetIndex = (round + i) % 4;
+        npc->moveToward(targets[targetIndex]);
     }
-
 }
 
 
