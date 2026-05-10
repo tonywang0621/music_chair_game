@@ -94,7 +94,7 @@ void Game::draw(){
     }
 
     if(!musicPlaying && !player->isSitting() && !gameOver){
-        float timeleft = sitDuration - sitDuration;
+        float timeleft = sitDuration - sitTimer;
 
         DrawText(TextFormat("Sit Time Left: %.1f",timeleft),20,100,30,RED);
     }
@@ -148,7 +148,7 @@ void Game::update(){
     if (!musicPlaying) {
         for (NPC* npc : npcs) {
             if (!npc->isEliminated() && !npc->isSitting()) {
-                npc->moveToTargetChair();
+                npc->update();
             }
         }
     }
@@ -247,6 +247,12 @@ void Game::startNextRound(){
     for (NPC* npc : npcs) {
         if (!npc->isEliminated()) {
             npc->resetForNextRound();
+
+            for (int i = 0; i < npcs.size(); i++) {
+                if (i < chairs.size()) {
+                    npcs[i]->setTargetChair(chairs[i]);
+                }
+            }
         }
     }
     player->setPosition(Vector2{400, 500});
@@ -255,8 +261,11 @@ void Game::startNextRound(){
         delete chairs.back();
         chairs.pop_back();
     }
+    
     for (Chair* chair : chairs) {
         chair->setOccupied(false);
+        chair->setReserved(false);
+        chair->setOccupantName("");
     }
 
 
@@ -313,24 +322,23 @@ void Game::let_npc_sit() {
     }
 }
 
-// ResolveRound：回合結算
 void Game::resolveRound() {
-    if (!player->isSitting()) {
-        for (Chair* chair : chairs) {
-            if (!chair->isOccupied()) {
-                player->setSitting(true);
-                chair->setOccupied(true);
-                chair->setOccupantName(player->getName());
-                break;
-            }
-        }
-    }
-
+    // 玩家沒有坐到椅子，就直接輸
     if (!player->isSitting()) {
         playerLose = true;
         gameOver = true;
+        roundResolved = true;
+        return;
     }
 
+    // 玩家有坐到，而且只剩最後一張椅子，玩家勝利
+    if (chairs.size() == 1) {
+        gameOver = true;
+        roundResolved = true;
+        return;
+    }
+
+    // 玩家有坐到，這回合結束，等待按 Enter 下一局
     roundResolved = true;
 }
 

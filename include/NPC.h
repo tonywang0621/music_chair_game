@@ -13,7 +13,7 @@ class NPC :public GameObject{
         bool _isSitting; 
         bool eliminated; //是否已出局
         float speed;
-        Chair* targetChair;
+        Chair* targetChair ;
         Vector2 startPosition; // NPC 第一局開始時的位置
     public:
 
@@ -38,7 +38,7 @@ class NPC :public GameObject{
         Chair* getTargetChair() const;
 
         // 讓 NPC 往目標椅子移動
-        void moveToTargetChair();
+        void update();
         void resetForNextRound();
 
         void moveToward(Vector2 targetPosition); //讓NPC 往某個目標方向移動

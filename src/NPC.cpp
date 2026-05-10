@@ -43,7 +43,7 @@ Chair* NPC::getTargetChair() const {
     return targetChair;
 }
 
-void NPC::moveToTargetChair() {
+void NPC::update() {
     if (targetChair == nullptr) {
         return;
     }
@@ -114,3 +114,4 @@ void NPC::moveToward(Vector2 targetPosition) {
     position.x += direction.x * speed;
     position.y += direction.y * speed;
 }
+
