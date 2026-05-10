@@ -1,17 +1,11 @@
-#include "raylib.h"
-#include <iostream>
+#include "Game.h"
+
 int main() {
+    Game game;
 
-    InitWindow(800, 450, "Raylib OOP");
-    SetTargetFPS(60);
+    game.init();
+    game.run();
+    game.shutDown();
 
-
-    while (!WindowShouldClose()) {
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
-        EndDrawing();
-    }
-
-    CloseWindow();
     return 0;
-}
+};

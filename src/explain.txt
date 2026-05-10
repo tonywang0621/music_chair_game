@@ -1,0 +1,44 @@
+Game.h/Game.cpp 遊戲主流程
+初始化視窗
+執行遊戲主迴圈
+更新所有物件
+繪製所有物件
+管理遊戲狀態
+控制音樂開始與停止
+判斷玩家是否成功坐上椅子
+
+
+Game 負責整個遊戲流程，
+但不負責玩家鍵盤控制與物件建立細節。
+--------
+GameObject.h / GameObject.cpp 所有遊戲物件的基底類別。 => 遊戲角色可以繼承他
+GameObject 是所有遊戲物件的基底類別（Base Class）。
+
+它負責儲存所有物件共同擁有的資料，例如：
+
+位置（position）
+大小（size）
+顏色（color）
+
+並提供共同函式：
+透過繼承，所有遊戲物件都能共用同一套介面。
+-----
+Player.h / Player.cpp 玩家物件
+
+功能
+Player 代表玩家角色。
+它繼承自 GameObject。
+玩家會擁有：
+
+位置
+大小
+顏色
+移動速度
+是否已坐下
+類別關係
+-------
+PlayerController.h / PlayerController.cpp 處理鍵盤輸入
+----
+GameObjectFactory.h / GameObjectFactory.cpp 專門生物件
+使用 Factory Pattern（工廠模式）。
+-----
